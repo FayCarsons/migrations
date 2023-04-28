@@ -1,6 +1,6 @@
-local size = 8
-local volt = 1638
-local max = 16383
+local LIMIT = (15 + 1) / 2
+local VOLT = 1638
+
 
 local MODE = 1;
 
@@ -137,42 +137,69 @@ end
 function dfs(graph, current_node, visited)
     visited[current_node] = true
 
-    let neighbors = graph[current_node]
+    local neighbors = graph[current_node]
     
-    for neihgbor, weight in pairs(neighbors) do
+    for neighbor, weight in pairs(neighbors) do
         if weight > 1 and not visited[neighbor] then
             return dfs(graph, neighbor, visited)
         end
     end
 
-    for neihgbor, weight in pairs(neighbors) do
+    for neighbor, weight in pairs(neighbors) do
         if weight == 1 and not visited[neighbor] then
             return {neighbor, visited}
         end
     end
 
-    for neihgbor, weight in pairs(neighbors) do
+    for neighbor, weight in pairs(neighbors) do
         if not visited[neihgbor] then 
             visited[neighbor] = true 
             return {neighbor, visited}
         end
     end
 
-
     return {current_node, visited}
 end
 
--- local circle_of_fifths = {0, 7, 2, 9, 4, 11, 6, 1, 8, 3, 10, 5}
+function random_dfs(graph, current_node, visited)
+    visited[current_node] = true
 
-local diamond = createTonalityDiamond(size)
-local graph = matrix(size)
+    local neighbors = {}
+    for neighbor, weight in pairs(graph[current_node]) do
+        if weight > 0 and not visited[neighbor] then
+            table.insert(neighbors, neighbor)
+        end
+    end
+
+    if #neighbors > 0 then 
+        local next_node = neighbors[math.random(#neighbors)]
+        return {next_node, visited}
+    else
+        for neighbor, weight in pairs(graph[current_node]) do
+            if weight > 0 and not visited[neighbor] then
+                table.insert(neighbors, neighbor)
+            end
+        end
+
+        if #neighbors > 0 then 
+            local next_node = neighbors[math.random(#neighbors)]
+            return {next_node, visited}
+        else
+            return {current_node, visited}
+        end
+    end
+end
+
+local diamond = {}
+local graph = {}
 local visited = {}
 
 local current_node = 1
 local start_node = 1
 
 function init()
-    print("hiiiiiii :3") 
+    diamond = createTonalityDiamond(LIMIT)
+    graph = matrix(LIMIT)
 end
 
 function index_to_pos(index, n)
@@ -183,9 +210,21 @@ function index_to_pos(index, n)
     return {x, y}
 end
 
--- Call are useful to send args from TT to crow
-function ii.self.call1(x)
-    MODE = x;
+-- calls: are useful to send args from TT to crow
+function ii.self.call1(mode)
+    MODE = mode;
+
+    print("reset!")
+    visited = {}
+    current_node = start_node
+end
+
+function ii.self.call2(mode, limit)
+    MODE = mode;
+    LIMIT = (limit + 1) / 2;
+
+    diamond = createTonalityDiamond(LIMIT)
+    graph = matrix(LIMIT)
 
     print(dump(visited))
     print("reset!")
@@ -199,18 +238,22 @@ function ii.self.query0()
 
     if MODE == 0 then
         value = bfs(graph, current_node, visited)
-    else MODE == 1 then
+    elseif MODE == 1 then
         value = dfs(graph, current_node, visited)
+    elseif MODE == 2 then
+        value = random_dfs(graph, current_node, visited)
+    else
+        print("invalid mode!") 
     end
-    
+
     current_node, visited = table.unpack(bfs(graph, current_node, visited))
     local x, y = table.unpack(index_to_pos(current_node, size))
-    return diamond[x][y] * volt
+    return diamond[x][y] * VOLT
 end 
 
 function note(current_node, size)
     local x, y = table.unpack(index_to_pos(current_node, size))
-    return math.floor((math.log(diamond[x][y]) / math.log(2)) * volt)
+    return math.floor((math.log(diamond[x][y]) / math.log(2)) * VOLT)
 end
 
 
